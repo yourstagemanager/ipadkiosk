@@ -112,6 +112,62 @@ textarea:focus, input:focus, select:focus {
 }
 select { padding-right: 32px; }
 
+/* --- Rich text editor --- */
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.rte-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rte-btn:active, .rte-btn.active { background: var(--accent); color: #fff; }
+.rte-btn.size-btn { width: auto; padding: 0 10px; font-size: 12px; }
+.rte-sep { width: 1px; background: rgba(255,255,255,0.1); margin: 4px 4px; }
+.rte-size-label { font-size: 11px; color: var(--text-dim); padding: 0 6px; display: flex; align-items: center; }
+.rte-color-input {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 3px;
+  cursor: pointer;
+  background: var(--surface2);
+}
+.rte-editor {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0 0 var(--radius) var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  overflow-y: auto;
+  word-wrap: break-word;
+}
+.rte-editor:focus { border-color: var(--accent); }
+.rte-editor-sm { min-height: 60px; }
+
 .color-row {
   display: flex;
   gap: 12px;
@@ -171,23 +227,46 @@ select { padding-right: 32px; }
   display: block;
 }
 
-/* --- Preview card --- */
+/* --- Preview card (iPad 1st gen: 1024x768) --- */
 .preview-card {
-  background: var(--surface);
+  background: #000;
   border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: var(--gap);
-  aspect-ratio: 4/3;
+  position: relative;
+  width: 100%;
+  padding-bottom: 75%; /* 4:3 aspect ratio (768/1024) */
+}
+.preview-card .preview-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1024px;
+  height: 768px;
+  border: none;
+  transform-origin: top left;
+}
+.preview-card .preview-msg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-}
-.preview-card .preview-msg {
   padding: 20px;
   text-align: center;
   word-break: break-word;
   white-space: pre-line;
+}
+.preview-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: var(--gap);
+  padding: 0 4px;
 }
 
 /* --- Log --- */
@@ -269,7 +348,6 @@ select { padding-right: 32px; }
 <!-- Tabs -->
 <div class="tabs">
   <button class="tab active" data-tab="content">Content</button>
-  <button class="tab" data-tab="style">Style</button>
   <button class="tab" data-tab="image">Image</button>
   <button class="tab" data-tab="preview">Preview</button>
   <button class="tab" data-tab="log">Activity</button>
@@ -279,16 +357,62 @@ select { padding-right: 32px; }
 <div class="panel active" id="panel-content">
   <div class="field">
     <label>Display Message</label>
-    <textarea id="message" placeholder="Enter your kiosk message..."></textarea>
+    <div class="rte-toolbar">
+      <button class="rte-btn" onclick="rteCmd('bold')" title="Bold"><b>B</b></button>
+      <button class="rte-btn" onclick="rteCmd('italic')" title="Italic"><i>I</i></button>
+      <button class="rte-btn" onclick="rteCmd('underline')" title="Underline"><u>U</u></button>
+      <div class="rte-sep"></div>
+      <button class="rte-btn size-btn" onclick="rteSetSize('24px')" title="Small">S</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('48px')" title="Medium">M</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('72px')" title="Large">L</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('96px')" title="Extra Large">XL</button>
+      <div class="rte-sep"></div>
+      <input type="color" class="rte-color-input" id="rteColor" value="#FFFFFF" onchange="rteApplyColor(this.value)" title="Text color">
+      <div class="rte-sep"></div>
+      <button class="rte-btn" onclick="rteCmd('removeFormat')" title="Clear formatting" style="font-size:12px;">CLR</button>
+    </div>
+    <div class="rte-editor" id="message" contenteditable="true" data-placeholder="Enter your kiosk message..."></div>
   </div>
-  <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
-</div>
-
-<!-- Style Panel -->
-<div class="panel" id="panel-style">
   <div class="field">
-    <label>Font Size (px)</label>
-    <input type="number" id="fontSize" min="12" max="200" value="64">
+    <label>Header</label>
+    <div class="rte-toolbar">
+      <button class="rte-btn" onclick="rteCmd('bold','headerText')" title="Bold"><b>B</b></button>
+      <button class="rte-btn" onclick="rteCmd('italic','headerText')" title="Italic"><i>I</i></button>
+      <button class="rte-btn" onclick="rteCmd('underline','headerText')" title="Underline"><u>U</u></button>
+      <div class="rte-sep"></div>
+      <button class="rte-btn size-btn" onclick="rteSetSize('14px','headerText')" title="Small">S</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('20px','headerText')" title="Medium">M</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('28px','headerText')" title="Large">L</button>
+      <div class="rte-sep"></div>
+      <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'headerText')" title="Text color">
+      <div class="rte-sep"></div>
+      <button class="rte-btn" onclick="rteCmd('removeFormat','headerText')" title="Clear formatting" style="font-size:12px;">CLR</button>
+    </div>
+    <div class="rte-editor rte-editor-sm" id="headerText" contenteditable="true" data-placeholder="Header text..."></div>
+  </div>
+  <div class="field">
+    <label>Footer</label>
+    <div class="rte-toolbar">
+      <button class="rte-btn" onclick="rteCmd('bold','footerText')" title="Bold"><b>B</b></button>
+      <button class="rte-btn" onclick="rteCmd('italic','footerText')" title="Italic"><i>I</i></button>
+      <button class="rte-btn" onclick="rteCmd('underline','footerText')" title="Underline"><u>U</u></button>
+      <div class="rte-sep"></div>
+      <button class="rte-btn size-btn" onclick="rteSetSize('14px','footerText')" title="Small">S</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('20px','footerText')" title="Medium">M</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('28px','footerText')" title="Large">L</button>
+      <div class="rte-sep"></div>
+      <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'footerText')" title="Text color">
+      <div class="rte-sep"></div>
+      <button class="rte-btn" onclick="rteCmd('removeFormat','footerText')" title="Clear formatting" style="font-size:12px;">CLR</button>
+    </div>
+    <div class="rte-editor rte-editor-sm" id="footerText" contenteditable="true" data-placeholder="Footer text..."></div>
+  </div>
+  <div class="field">
+    <label>Background Color</label>
+    <div class="color-row">
+      <input type="color" id="bgColorPicker" value="#1a1a2e">
+      <input type="text" id="bgColor" value="#1a1a2e" maxlength="7">
+    </div>
   </div>
   <div class="field">
     <label>Font Family</label>
@@ -302,24 +426,11 @@ select { padding-right: 32px; }
     </select>
   </div>
   <div class="field">
-    <label>Text Color</label>
-    <div class="color-row">
-      <input type="color" id="fontColorPicker" value="#FFFFFF">
-      <input type="text" id="fontColor" value="#FFFFFF" maxlength="7">
-    </div>
-  </div>
-  <div class="field">
-    <label>Background Color</label>
-    <div class="color-row">
-      <input type="color" id="bgColorPicker" value="#1a1a2e">
-      <input type="text" id="bgColor" value="#1a1a2e" maxlength="7">
-    </div>
-  </div>
-  <div class="field">
     <label>Refresh Interval (seconds)</label>
-    <input type="number" id="refreshInterval" min="30" max="3600" value="300">
+    <input type="number" id="refreshInterval" min="5" max="3600" value="300">
   </div>
   <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
+  <button class="btn btn-secondary" onclick="forceRefresh()">Force iPad Refresh</button>
 </div>
 
 <!-- Image Panel -->
@@ -360,11 +471,12 @@ select { padding-right: 32px; }
 <!-- Preview Panel -->
 <div class="panel" id="panel-preview">
   <div class="preview-card" id="previewCard">
-    <div class="preview-msg" id="previewMsg">Loading...</div>
+    <div class="preview-msg" id="previewMsg">Save content first, then refresh preview</div>
   </div>
-  <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-bottom:var(--gap);">
-    Approximate preview. Actual display may vary on iPad.
-  </p>
+  <div class="preview-info">
+    <span>iPad 1st Gen (1024 x 768)</span>
+    <span id="previewScale"></span>
+  </div>
   <button class="btn btn-secondary" onclick="refreshPreview()">Refresh Preview</button>
 </div>
 
@@ -397,13 +509,35 @@ document.querySelectorAll('.tab').forEach(function(tab) {
   });
 });
 
+// --- Rich text editor ---
+function rteCmd(cmd, targetId) {
+  document.execCommand(cmd, false, null);
+  document.getElementById(targetId || 'message').focus();
+}
+
+function rteSetSize(size, targetId) {
+  var sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return;
+
+  document.execCommand('fontSize', false, '7');
+
+  var editor = document.getElementById(targetId || 'message');
+  var fonts = editor.querySelectorAll('font[size="7"]');
+  for (var i = 0; i < fonts.length; i++) {
+    var span = document.createElement('span');
+    span.style.fontSize = size;
+    span.innerHTML = fonts[i].innerHTML;
+    fonts[i].parentNode.replaceChild(span, fonts[i]);
+  }
+  editor.focus();
+}
+
+function rteApplyColor(color, targetId) {
+  document.execCommand('foreColor', false, color);
+  document.getElementById(targetId || 'message').focus();
+}
+
 // --- Color picker sync ---
-document.getElementById('fontColorPicker').addEventListener('input', function() {
-  document.getElementById('fontColor').value = this.value;
-});
-document.getElementById('fontColor').addEventListener('input', function() {
-  try { document.getElementById('fontColorPicker').value = this.value; } catch(e) {}
-});
 document.getElementById('bgColorPicker').addEventListener('input', function() {
   document.getElementById('bgColor').value = this.value;
 });
@@ -469,19 +603,18 @@ function load() {
 }
 
 function populateFields(d) {
-  document.getElementById('message').value = d.message || '';
-  document.getElementById('fontSize').value = d.fontSize || '64';
+  document.getElementById('message').innerHTML = d.message || '';
+  document.getElementById('headerText').innerHTML = d.headerText || '';
+  document.getElementById('footerText').innerHTML = d.footerText || '';
   document.getElementById('fontFamily').value = d.fontFamily || 'Helvetica, Arial, sans-serif';
-  document.getElementById('fontColor').value = d.fontColor || '#FFFFFF';
-  document.getElementById('bgColor').value = d.bgColor || '#1a1a2e';
+  document.getElementById('bgColor').value = d.bgColor || '#000000';
   document.getElementById('refreshInterval').value = d.refreshInterval || '300';
   document.getElementById('imageUrl').value = d.imageUrl || '';
   document.getElementById('imagePosition').value = d.imagePosition || 'above';
   document.getElementById('imageMaxWidth').value = d.imageMaxWidth || '60';
 
   try {
-    document.getElementById('fontColorPicker').value = d.fontColor || '#FFFFFF';
-    document.getElementById('bgColorPicker').value = d.bgColor || '#1a1a2e';
+    document.getElementById('bgColorPicker').value = d.bgColor || '#000000';
   } catch(e) {}
 
   if (d.imageUrl) {
@@ -499,10 +632,10 @@ function populateFields(d) {
 // --- Save data ---
 function save() {
   var fields = {
-    message: document.getElementById('message').value,
-    fontSize: document.getElementById('fontSize').value,
+    message: document.getElementById('message').innerHTML,
+    headerText: document.getElementById('headerText').innerHTML,
+    footerText: document.getElementById('footerText').innerHTML,
     fontFamily: document.getElementById('fontFamily').value,
-    fontColor: document.getElementById('fontColor').value,
     bgColor: document.getElementById('bgColor').value,
     refreshInterval: document.getElementById('refreshInterval').value,
     imageUrl: document.getElementById('imageUrl').value,
@@ -529,18 +662,82 @@ function save() {
 // --- Preview ---
 function refreshPreview() {
   var card = document.getElementById('previewCard');
-  var msg = document.getElementById('message').value || 'Welcome';
-  var bg = document.getElementById('bgColor').value || '#1a1a2e';
-  var color = document.getElementById('fontColor').value || '#FFFFFF';
-  var size = Math.max(8, Math.round(parseInt(document.getElementById('fontSize').value || '64') * 0.25));
-  var font = document.getElementById('fontFamily').value;
+  var cardWidth = card.offsetWidth;
+  var scale = cardWidth / 1024;
 
-  card.style.background = bg;
-  var previewMsg = document.getElementById('previewMsg');
-  previewMsg.textContent = msg;
-  previewMsg.style.color = color;
-  previewMsg.style.fontSize = size + 'px';
-  previewMsg.style.fontFamily = font;
+  // Remove old iframe/msg if present
+  var oldFrame = card.querySelector('.preview-frame');
+  var oldMsg = card.querySelector('.preview-msg');
+  if (oldFrame) oldFrame.remove();
+  if (oldMsg) oldMsg.remove();
+
+  // Build the kiosk URL — for Apps Script it's same origin with ?page=kiosk
+  // For local preview it's /kiosk
+  var kioskUrl;
+  if (window.location.pathname.indexOf('/editor') !== -1) {
+    // Local preview server
+    kioskUrl = '/kiosk';
+  } else {
+    // Google Apps Script — reload same URL without page param
+    var base = window.location.href.split('?')[0];
+    kioskUrl = base + '?page=kiosk&t=' + Date.now();
+  }
+
+  var iframe = document.createElement('iframe');
+  iframe.className = 'preview-frame';
+  iframe.style.transform = 'scale(' + scale + ')';
+  iframe.style.webkitTransform = 'scale(' + scale + ')';
+  iframe.src = kioskUrl + (kioskUrl.indexOf('?') !== -1 ? '&' : '?') + 'nocache=' + Date.now();
+  card.appendChild(iframe);
+
+  var scaleLabel = document.getElementById('previewScale');
+  if (scaleLabel) {
+    scaleLabel.textContent = Math.round(scale * 100) + '% scale';
+  }
+}
+
+// --- Force Refresh ---
+function forceRefresh() {
+  // Temporarily set refresh to 5s so the iPad picks up changes fast,
+  // then revert to the user's chosen interval after 30s
+  var userInterval = document.getElementById('refreshInterval').value;
+  var tempFields = {
+    message: document.getElementById('message').innerHTML,
+    headerText: document.getElementById('headerText').innerHTML,
+    footerText: document.getElementById('footerText').innerHTML,
+    fontFamily: document.getElementById('fontFamily').value,
+    bgColor: document.getElementById('bgColor').value,
+    refreshInterval: '5',
+    imageUrl: document.getElementById('imageUrl').value,
+    imagePosition: document.getElementById('imagePosition').value,
+    imageMaxWidth: document.getElementById('imageMaxWidth').value
+  };
+
+  setStatus('saving');
+  showToast('Pushing update (5s refresh)...');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      setStatus('connected');
+      showToast('iPad will refresh within 5s', 'success');
+
+      // Revert to normal interval after 30 seconds
+      setTimeout(function() {
+        var revertFields = Object.assign({}, tempFields);
+        revertFields.refreshInterval = userInterval;
+        google.script.run
+          .withSuccessHandler(function() {
+            showToast('Refresh interval restored to ' + userInterval + 's', 'success');
+          })
+          .withFailureHandler(function() {})
+          .clientSaveData(revertFields);
+      }, 30000);
+    })
+    .withFailureHandler(function(err) {
+      setStatus('error');
+      showToast('Failed: ' + err.message, 'error');
+    })
+    .clientSaveData(tempFields);
 }
 
 // --- Activity Log ---

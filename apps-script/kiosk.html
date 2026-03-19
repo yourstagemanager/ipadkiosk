@@ -22,9 +22,75 @@ html, body {
   -webkit-text-size-adjust: none;
 }
 body {
-  background-color: <?= d.bgColor || '#1a1a2e' ?>;
+  background-color: <?= d.bgColor || '#000000' ?>;
   color: <?= d.fontColor || '#FFFFFF' ?>;
   font-family: <?= d.fontFamily || 'Helvetica, Arial, sans-serif' ?>;
+}
+
+/* Watermark logos - centered, filling the screen */
+/* Using absolute positioning instead of flexbox for iOS 5 compat */
+.watermark-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.watermark-pos {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+.watermark-pos-1 {
+  top: 18%;
+}
+.watermark-pos-1 .watermark {
+  max-width: 60%;
+}
+.watermark-pos-2 {
+  top: 58%;
+}
+.watermark {
+  max-width: 70%;
+  max-height: 35%;
+  opacity: 0.30;
+  -webkit-filter: grayscale(100%);
+  filter: grayscale(100%);
+  pointer-events: none;
+}
+
+/* Header pinned to top */
+.header-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  padding: 20px 40px;
+  z-index: 2;
+}
+
+/* Footer pinned to bottom */
+.footer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  padding: 20px 40px;
+  z-index: 2;
 }
 
 /* Using table layout for vertical centering - works on iOS 5 Safari */
@@ -32,19 +98,22 @@ body {
   display: table;
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
 }
 .inner {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
-  padding: 40px;
+  padding: 80px 40px 80px;
 }
 
 .message {
   font-size: <?= d.fontSize || '64' ?>px;
   line-height: 1.3;
   word-wrap: break-word;
-  white-space: pre-line;
+  position: relative;
+  z-index: 1;
 }
 
 .kiosk-image {
@@ -78,6 +147,21 @@ body {
 </head>
 <body class="<?= (d.imageUrl && (d.imagePosition === 'left' || d.imagePosition === 'right')) ? 'layout-horizontal' : '' ?>">
 
+<? if (d.watermarkUrl || d.watermarkUrl2) { ?>
+<div class="watermark-wrap">
+  <? if (d.watermarkUrl) { ?>
+  <div class="watermark-pos watermark-pos-1"><img class="watermark" src="<?= d.watermarkUrl ?>" alt=""></div>
+  <? } ?>
+  <? if (d.watermarkUrl2) { ?>
+  <div class="watermark-pos watermark-pos-2"><img class="watermark" src="<?= d.watermarkUrl2 ?>" alt=""></div>
+  <? } ?>
+</div>
+<? } ?>
+
+<? if (d.headerText) { ?>
+<div class="header-bar"><?!= d.headerText ?></div>
+<? } ?>
+
 <div class="outer">
 <div class="inner">
 
@@ -89,11 +173,11 @@ body {
       <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
     </div>
     <div class="text-cell">
-      <div class="message"><?= d.message || 'Welcome' ?></div>
+      <div class="message"><?!= d.message || 'Welcome' ?></div>
     </div>
     <? } else { ?>
     <div class="text-cell">
-      <div class="message"><?= d.message || 'Welcome' ?></div>
+      <div class="message"><?!= d.message || 'Welcome' ?></div>
     </div>
     <div class="image-cell">
       <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
@@ -104,7 +188,7 @@ body {
 <? } else if (d.imageUrl && d.imagePosition === 'background') { ?>
   <!-- Background image layout -->
   <div class="message" style="background-image:url('<?= d.imageUrl ?>');background-size:cover;background-position:center;padding:40px;min-height:100%;">
-    <?= d.message || 'Welcome' ?>
+    <?!= d.message || 'Welcome' ?>
   </div>
 
 <? } else { ?>
@@ -113,7 +197,7 @@ body {
     <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
   <? } ?>
 
-  <div class="message"><?= d.message || 'Welcome' ?></div>
+  <div class="message"><?!= d.message || 'Welcome' ?></div>
 
   <? if (d.imageUrl && (d.imagePosition === 'below' || (d.imagePosition !== 'above' && d.imageUrl))) { ?>
     <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
@@ -122,6 +206,10 @@ body {
 
 </div>
 </div>
+
+<? if (d.footerText) { ?>
+<div class="footer-bar"><?!= d.footerText ?></div>
+<? } ?>
 
 </body>
 </html>
