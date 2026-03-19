@@ -2,3 +2,5 @@
 .claude/
 preview/editor-pin.txt
 preview/play-log.json
+preview/kiosk-data.json
+*.psd
