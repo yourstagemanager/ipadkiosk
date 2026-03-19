@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<title>Kiosk Editor</title>
+<style>
+:root {
+  --bg: #0f0f23;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --accent: #e94560;
+  --accent2: #0f3460;
+  --text: #eee;
+  --text-dim: #888;
+  --radius: 12px;
+  --gap: 16px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* --- Header --- */
+.header {
+  background: var(--surface);
+  padding: 16px var(--gap);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.header h1 { font-size: 18px; font-weight: 600; }
+.status-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #555;
+  display: inline-block;
+  margin-right: 8px;
+  transition: background 0.3s;
+}
+.status-dot.connected { background: #4ade80; }
+.status-dot.saving { background: #facc15; }
+.status-dot.error { background: #ef4444; }
+
+/* --- Tabs --- */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  overflow-x: auto;
+}
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* --- Panels --- */
+.panel { display: none; padding: var(--gap); }
+.panel.active { display: block; }
+
+/* --- Form elements --- */
+.field { margin-bottom: var(--gap); }
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+textarea, input[type="text"], input[type="number"], select {
+  width: 100%;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
+textarea:focus, input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+select { padding-right: 32px; }
+
+.color-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.color-row input[type="color"] {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--surface2);
+  padding: 4px;
+}
+.color-row input[type="text"] { flex: 1; }
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+.btn:active { opacity: 0.7; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
+.btn + .btn { margin-top: 10px; }
+
+/* --- Image upload --- */
+.image-upload-area {
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.image-upload-area:active { border-color: var(--accent); }
+.image-preview {
+  margin-top: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.image-preview img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+/* --- Preview card --- */
+.preview-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: var(--gap);
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.preview-card .preview-msg {
+  padding: 20px;
+  text-align: center;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* --- Log --- */
+.log-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.log-entry .time { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.log-entry .event { color: var(--text); font-weight: 500; }
+.log-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px;
+}
+
+/* --- Toast --- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  transition: transform 0.3s ease;
+  z-index: 200;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { border-left: 4px solid #4ade80; }
+.toast.error { border-left: 4px solid #ef4444; }
+
+/* --- Loader overlay --- */
+.loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+.loader.hidden { display: none; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <div class="spinner"></div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;align-items:center;">
+    <span class="status-dot" id="statusDot"></span>
+    <h1>Kiosk Editor</h1>
+  </div>
+  <span id="lastSaved" style="font-size:12px;color:var(--text-dim);"></span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="content">Content</button>
+  <button class="tab" data-tab="style">Style</button>
+  <button class="tab" data-tab="image">Image</button>
+  <button class="tab" data-tab="preview">Preview</button>
+  <button class="tab" data-tab="log">Activity</button>
+</div>
+
+<!-- Content Panel -->
+<div class="panel active" id="panel-content">
+  <div class="field">
+    <label>Display Message</label>
+    <textarea id="message" placeholder="Enter your kiosk message..."></textarea>
+  </div>
+  <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
+</div>
+
+<!-- Style Panel -->
+<div class="panel" id="panel-style">
+  <div class="field">
+    <label>Font Size (px)</label>
+    <input type="number" id="fontSize" min="12" max="200" value="64">
+  </div>
+  <div class="field">
+    <label>Font Family</label>
+    <select id="fontFamily">
+      <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+      <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+      <option value="'Courier New', Courier, monospace">Courier</option>
+      <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+      <option value="Verdana, Geneva, sans-serif">Verdana</option>
+      <option value="Palatino, 'Book Antiqua', serif">Palatino</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Text Color</label>
+    <div class="color-row">
+      <input type="color" id="fontColorPicker" value="#FFFFFF">
+      <input type="text" id="fontColor" value="#FFFFFF" maxlength="7">
+    </div>
+  </div>
+  <div class="field">
+    <label>Background Color</label>
+    <div class="color-row">
+      <input type="color" id="bgColorPicker" value="#1a1a2e">
+      <input type="text" id="bgColor" value="#1a1a2e" maxlength="7">
+    </div>
+  </div>
+  <div class="field">
+    <label>Refresh Interval (seconds)</label>
+    <input type="number" id="refreshInterval" min="30" max="3600" value="300">
+  </div>
+  <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
+</div>
+
+<!-- Image Panel -->
+<div class="panel" id="panel-image">
+  <div class="field">
+    <label>Image</label>
+    <div class="image-upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div>Tap to upload an image</div>
+      <div style="font-size:12px;margin-top:8px;">JPG, PNG supported</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <div class="image-preview" id="imagePreview" style="display:none">
+      <img id="previewImg" src="" alt="Preview">
+    </div>
+  </div>
+  <div class="field">
+    <label>Or Paste Image URL</label>
+    <input type="text" id="imageUrl" placeholder="https://...">
+  </div>
+  <div class="field">
+    <label>Image Position</label>
+    <select id="imagePosition">
+      <option value="above">Above text</option>
+      <option value="below">Below text</option>
+      <option value="left">Left of text</option>
+      <option value="right">Right of text</option>
+      <option value="background">Background</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Image Max Width (%)</label>
+    <input type="number" id="imageMaxWidth" min="10" max="100" value="60">
+  </div>
+  <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
+  <button class="btn btn-secondary" onclick="clearImage()">Remove Image</button>
+</div>
+
+<!-- Preview Panel -->
+<div class="panel" id="panel-preview">
+  <div class="preview-card" id="previewCard">
+    <div class="preview-msg" id="previewMsg">Loading...</div>
+  </div>
+  <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-bottom:var(--gap);">
+    Approximate preview. Actual display may vary on iPad.
+  </p>
+  <button class="btn btn-secondary" onclick="refreshPreview()">Refresh Preview</button>
+</div>
+
+<!-- Activity Log Panel -->
+<div class="panel" id="panel-log">
+  <div id="logList">
+    <div class="log-empty">Loading activity log...</div>
+  </div>
+  <button class="btn btn-secondary" onclick="loadLog()" style="margin-top:var(--gap);">Refresh Log</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// --- State ---
+var state = {};
+var dirty = false;
+
+// --- Tab switching ---
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+
+    if (tab.dataset.tab === 'preview') refreshPreview();
+    if (tab.dataset.tab === 'log') loadLog();
+  });
+});
+
+// --- Color picker sync ---
+document.getElementById('fontColorPicker').addEventListener('input', function() {
+  document.getElementById('fontColor').value = this.value;
+});
+document.getElementById('fontColor').addEventListener('input', function() {
+  try { document.getElementById('fontColorPicker').value = this.value; } catch(e) {}
+});
+document.getElementById('bgColorPicker').addEventListener('input', function() {
+  document.getElementById('bgColor').value = this.value;
+});
+document.getElementById('bgColor').addEventListener('input', function() {
+  try { document.getElementById('bgColorPicker').value = this.value; } catch(e) {}
+});
+
+// --- File upload ---
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  // Show local preview
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('previewImg').src = ev.target.result;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('uploadArea').style.display = 'none';
+
+    // Upload to Drive
+    setStatus('saving');
+    showToast('Uploading image...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('imageUrl').value = result;
+        setStatus('connected');
+        showToast('Image uploaded!', 'success');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('error');
+        showToast('Upload failed: ' + err.message, 'error');
+      })
+      .clientUploadImage(ev.target.result.split(',')[1], file.name);
+  };
+  reader.readAsDataURL(file);
+});
+
+function clearImage() {
+  document.getElementById('imageUrl').value = '';
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('uploadArea').style.display = 'block';
+  document.getElementById('previewImg').src = '';
+  save();
+}
+
+// --- Load data ---
+function load() {
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(data) {
+      state = data;
+      populateFields(data);
+      setStatus('connected');
+      showLoader(false);
+    })
+    .withFailureHandler(function(err) {
+      setStatus('error');
+      showLoader(false);
+      showToast('Failed to load: ' + err.message, 'error');
+    })
+    .clientGetData();
+}
+
+function populateFields(d) {
+  document.getElementById('message').value = d.message || '';
+  document.getElementById('fontSize').value = d.fontSize || '64';
+  document.getElementById('fontFamily').value = d.fontFamily || 'Helvetica, Arial, sans-serif';
+  document.getElementById('fontColor').value = d.fontColor || '#FFFFFF';
+  document.getElementById('bgColor').value = d.bgColor || '#1a1a2e';
+  document.getElementById('refreshInterval').value = d.refreshInterval || '300';
+  document.getElementById('imageUrl').value = d.imageUrl || '';
+  document.getElementById('imagePosition').value = d.imagePosition || 'above';
+  document.getElementById('imageMaxWidth').value = d.imageMaxWidth || '60';
+
+  try {
+    document.getElementById('fontColorPicker').value = d.fontColor || '#FFFFFF';
+    document.getElementById('bgColorPicker').value = d.bgColor || '#1a1a2e';
+  } catch(e) {}
+
+  if (d.imageUrl) {
+    document.getElementById('previewImg').src = d.imageUrl;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('uploadArea').style.display = 'none';
+  }
+
+  if (d.lastUpdated) {
+    var dt = new Date(d.lastUpdated);
+    document.getElementById('lastSaved').textContent = 'Updated ' + formatTime(dt);
+  }
+}
+
+// --- Save data ---
+function save() {
+  var fields = {
+    message: document.getElementById('message').value,
+    fontSize: document.getElementById('fontSize').value,
+    fontFamily: document.getElementById('fontFamily').value,
+    fontColor: document.getElementById('fontColor').value,
+    bgColor: document.getElementById('bgColor').value,
+    refreshInterval: document.getElementById('refreshInterval').value,
+    imageUrl: document.getElementById('imageUrl').value,
+    imagePosition: document.getElementById('imagePosition').value,
+    imageMaxWidth: document.getElementById('imageMaxWidth').value
+  };
+
+  setStatus('saving');
+
+  google.script.run
+    .withSuccessHandler(function() {
+      setStatus('connected');
+      showToast('Published!', 'success');
+      var now = new Date();
+      document.getElementById('lastSaved').textContent = 'Updated ' + formatTime(now);
+    })
+    .withFailureHandler(function(err) {
+      setStatus('error');
+      showToast('Save failed: ' + err.message, 'error');
+    })
+    .clientSaveData(fields);
+}
+
+// --- Preview ---
+function refreshPreview() {
+  var card = document.getElementById('previewCard');
+  var msg = document.getElementById('message').value || 'Welcome';
+  var bg = document.getElementById('bgColor').value || '#1a1a2e';
+  var color = document.getElementById('fontColor').value || '#FFFFFF';
+  var size = Math.max(8, Math.round(parseInt(document.getElementById('fontSize').value || '64') * 0.25));
+  var font = document.getElementById('fontFamily').value;
+
+  card.style.background = bg;
+  var previewMsg = document.getElementById('previewMsg');
+  previewMsg.textContent = msg;
+  previewMsg.style.color = color;
+  previewMsg.style.fontSize = size + 'px';
+  previewMsg.style.fontFamily = font;
+}
+
+// --- Activity Log ---
+function loadLog() {
+  document.getElementById('logList').innerHTML = '<div class="log-empty">Loading...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(entries) {
+      var html = '';
+      if (!entries || entries.length === 0) {
+        html = '<div class="log-empty">No activity yet. The kiosk will log each time it refreshes.</div>';
+      } else {
+        for (var i = 0; i < entries.length; i++) {
+          var dt = new Date(entries[i].timestamp);
+          html += '<div class="log-entry">' +
+            '<span class="event">' + escapeHtml(entries[i].event) + '</span>' +
+            '<span class="time">' + formatTime(dt) + '</span>' +
+            '</div>';
+        }
+      }
+      document.getElementById('logList').innerHTML = html;
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('logList').innerHTML =
+        '<div class="log-empty">Failed to load log: ' + escapeHtml(err.message) + '</div>';
+    })
+    .clientGetLog();
+}
+
+// --- Helpers ---
+function setStatus(s) {
+  var dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + s;
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '') + ' show';
+  setTimeout(function() { t.className = 'toast'; }, 2500);
+}
+
+function showLoader(show) {
+  document.getElementById('loader').className = show ? 'loader' : 'loader hidden';
+}
+
+function formatTime(d) {
+  var now = new Date();
+  var diff = now - d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// --- Init ---
+load();
+</script>
+
+</body>
+</html>

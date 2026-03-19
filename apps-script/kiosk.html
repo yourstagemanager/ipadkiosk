@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-touch-fullscreen" content="yes">
+<? var d = JSON.parse(kioskData); ?>
+<meta http-equiv="refresh" content="<?= d.refreshInterval || '300' ?>">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: none;
+}
+body {
+  background-color: <?= d.bgColor || '#1a1a2e' ?>;
+  color: <?= d.fontColor || '#FFFFFF' ?>;
+  font-family: <?= d.fontFamily || 'Helvetica, Arial, sans-serif' ?>;
+}
+
+/* Using table layout for vertical centering - works on iOS 5 Safari */
+.outer {
+  display: table;
+  width: 100%;
+  height: 100%;
+}
+.inner {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  padding: 40px;
+}
+
+.message {
+  font-size: <?= d.fontSize || '64' ?>px;
+  line-height: 1.3;
+  word-wrap: break-word;
+  white-space: pre-line;
+}
+
+.kiosk-image {
+  max-width: <?= d.imageMaxWidth || '60' ?>%;
+  max-height: 50%;
+  margin: 20px auto;
+  display: block;
+}
+
+/* Layout variants */
+.layout-horizontal .inner {
+  display: table-cell;
+  vertical-align: middle;
+}
+.layout-horizontal .content-wrap {
+  display: table;
+  width: 100%;
+}
+.layout-horizontal .image-cell,
+.layout-horizontal .text-cell {
+  display: table-cell;
+  vertical-align: middle;
+  width: 50%;
+  padding: 20px;
+}
+.layout-horizontal .kiosk-image {
+  max-width: 90%;
+  max-height: 80%;
+}
+</style>
+</head>
+<body class="<?= (d.imageUrl && (d.imagePosition === 'left' || d.imagePosition === 'right')) ? 'layout-horizontal' : '' ?>">
+
+<div class="outer">
+<div class="inner">
+
+<? if (d.imageUrl && (d.imagePosition === 'left' || d.imagePosition === 'right')) { ?>
+  <!-- Horizontal layout -->
+  <div class="content-wrap">
+    <? if (d.imagePosition === 'left') { ?>
+    <div class="image-cell">
+      <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
+    </div>
+    <div class="text-cell">
+      <div class="message"><?= d.message || 'Welcome' ?></div>
+    </div>
+    <? } else { ?>
+    <div class="text-cell">
+      <div class="message"><?= d.message || 'Welcome' ?></div>
+    </div>
+    <div class="image-cell">
+      <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
+    </div>
+    <? } ?>
+  </div>
+
+<? } else if (d.imageUrl && d.imagePosition === 'background') { ?>
+  <!-- Background image layout -->
+  <div class="message" style="background-image:url('<?= d.imageUrl ?>');background-size:cover;background-position:center;padding:40px;min-height:100%;">
+    <?= d.message || 'Welcome' ?>
+  </div>
+
+<? } else { ?>
+  <!-- Vertical layout (above/below) -->
+  <? if (d.imageUrl && d.imagePosition === 'above') { ?>
+    <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
+  <? } ?>
+
+  <div class="message"><?= d.message || 'Welcome' ?></div>
+
+  <? if (d.imageUrl && (d.imagePosition === 'below' || (d.imagePosition !== 'above' && d.imageUrl))) { ?>
+    <img class="kiosk-image" src="<?= d.imageUrl ?>" alt="">
+  <? } ?>
+<? } ?>
+
+</div>
+</div>
+
+</body>
+</html>
