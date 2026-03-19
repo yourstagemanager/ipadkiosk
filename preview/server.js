@@ -7,6 +7,61 @@ const path = require('path');
 const PORT = 3000;
 const DATA_FILE = path.join(__dirname, 'kiosk-data.json');
 const LOG_FILE = path.join(__dirname, 'play-log.json');
+const PIN_FILE = path.join(__dirname, 'editor-pin.txt');
+
+// --- Auth ---
+// PIN is stored in preview/editor-pin.txt — change it there.
+// Default PIN is 1234 if file doesn't exist.
+function getPin() {
+  try { return fs.readFileSync(PIN_FILE, 'utf8').trim(); } catch (e) { return '1234'; }
+}
+
+var sessions = new Set();
+
+function generateToken() {
+  var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var token = '';
+  for (var i = 0; i < 32; i++) token += chars[Math.floor(Math.random() * chars.length)];
+  return token;
+}
+
+function getSessionToken(req) {
+  var cookie = req.headers['cookie'] || '';
+  var match = cookie.match(/kiosk_session=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+function isAuthenticated(req) {
+  var token = getSessionToken(req);
+  return token && sessions.has(token);
+}
+
+function getLoginPage(error) {
+  return '<!DOCTYPE html><html><head>' +
+    '<meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">' +
+    '<meta name="apple-mobile-web-app-capable" content="yes">' +
+    '<title>Kiosk Editor</title>' +
+    '<style>' +
+    '* { margin: 0; padding: 0; box-sizing: border-box; }' +
+    'body { background: #0f0f23; color: #eee; font-family: -apple-system, Helvetica, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }' +
+    '.box { background: #1a1a2e; border-radius: 16px; padding: 40px 32px; width: 320px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }' +
+    'h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }' +
+    'p { font-size: 14px; color: #aaa; margin-bottom: 28px; }' +
+    'input[type=password] { width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid #333; background: #0f0f23; color: #fff; font-size: 24px; text-align: center; letter-spacing: 8px; outline: none; margin-bottom: 16px; }' +
+    'button { width: 100%; padding: 14px; border-radius: 10px; border: none; background: #e94560; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }' +
+    '.error { color: #e94560; font-size: 13px; margin-top: 12px; }' +
+    '</style></head><body>' +
+    '<div class="box">' +
+    '<h2>Kiosk Editor</h2>' +
+    '<p>Enter your PIN to continue</p>' +
+    '<form method="POST" action="/api/auth">' +
+    '<input type="password" name="pin" inputmode="numeric" pattern="[0-9]*" autofocus placeholder="••••">' +
+    '<button type="submit">Unlock</button>' +
+    (error ? '<div class="error">Incorrect PIN. Try again.</div>' : '') +
+    '</form>' +
+    '</div></body></html>';
+}
 
 // Default kiosk data
 const DEFAULTS = {
@@ -219,6 +274,39 @@ var server = http.createServer(function(req, res) {
   var url = req.url.split('?')[0];
   var method = req.method;
 
+  // Auth endpoints
+  if (url === '/api/auth' && method === 'POST') {
+    var body = '';
+    req.on('data', function(chunk) { body += chunk; });
+    req.on('end', function() {
+      var pin = '';
+      // Parse form POST (application/x-www-form-urlencoded)
+      var match = body.match(/pin=([^&]*)/);
+      if (match) pin = decodeURIComponent(match[1]);
+      if (pin === getPin()) {
+        var token = generateToken();
+        sessions.add(token);
+        res.writeHead(302, {
+          'Set-Cookie': 'kiosk_session=' + token + '; Path=/; HttpOnly',
+          'Location': '/editor'
+        });
+        res.end();
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(getLoginPage(true));
+      }
+    });
+    return;
+  }
+
+  if (url === '/api/logout') {
+    var token = getSessionToken(req);
+    if (token) sessions.delete(token);
+    res.writeHead(302, { 'Set-Cookie': 'kiosk_session=; Path=/; Max-Age=0', 'Location': '/editor' });
+    res.end();
+    return;
+  }
+
   // API endpoints
   if (url === '/api/data' && method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -227,6 +315,11 @@ var server = http.createServer(function(req, res) {
   }
 
   if (url === '/api/data' && method === 'POST') {
+    if (!isAuthenticated(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
     var body = '';
     req.on('data', function(chunk) { body += chunk; });
     req.on('end', function() {
@@ -280,6 +373,11 @@ var server = http.createServer(function(req, res) {
   }
 
   if (url === '/editor') {
+    if (!isAuthenticated(req)) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(getLoginPage(false));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(getEditorHtml());
     return;

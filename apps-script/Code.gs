@@ -99,6 +99,10 @@ function getKioskData() {
       ['imageUrl', ''],
       ['imagePosition', 'above'],
       ['imageMaxWidth', '60'],
+      ['watermarkUrl', ''],
+      ['watermarkUrl2', ''],
+      ['headerText', ''],
+      ['footerText', ''],
       ['refreshInterval', '300'],
       ['lastUpdated', new Date().toISOString()]
     ];
