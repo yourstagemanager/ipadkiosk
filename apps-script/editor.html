@@ -795,24 +795,34 @@ function loadLog() {
           '<div style="font-size:12px;color:var(--text-dim);">Last seen ' + formatTime(lastDt) + '</div></div>' +
           '</div>';
 
-        // Only show page loads — heartbeats are used for status card only
-        var pageLoads = [];
+        // Only show page loads and editor saves — heartbeats used for status only
+        var logEntries = [];
         for (var i = 0; i < entries.length; i++) {
-          if (entries[i].event !== 'heartbeat') pageLoads.push(entries[i]);
+          if (entries[i].event !== 'heartbeat') logEntries.push(entries[i]);
         }
 
-        var show = pageLoads.slice(0, 50);
+        var show = logEntries.slice(0, 50);
         if (show.length === 0) {
-          html = '<div class="log-empty">No page loads recorded yet.</div>';
+          html = '<div class="log-empty">No activity recorded yet.</div>';
         } else {
           for (var j = 0; j < show.length; j++) {
             var g = show[j];
             var dt = new Date(g.timestamp);
-            var label = g.event === 'preview-load' ? '📱 page load' : escapeHtml(g.event);
-            html += '<div class="log-entry"><span class="event">' + label + '</span><span class="time">' + formatTime(dt) + '</span></div>';
+            var label, detail = '';
+            if (g.event === 'preview-load') {
+              label = '📱 page load';
+            } else if (g.event === 'editor-save') {
+              label = '💾 editor save';
+              if (g.detail) detail = '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">' + escapeHtml(g.detail) + '</div>';
+            } else {
+              label = escapeHtml(g.event);
+            }
+            html += '<div class="log-entry" style="flex-direction:column;align-items:flex-start;">' +
+              '<div style="display:flex;justify-content:space-between;width:100%;"><span class="event">' + label + '</span><span class="time">' + formatTime(dt) + '</span></div>' +
+              detail + '</div>';
           }
-          if (pageLoads.length > 50) {
-            html += '<div class="log-empty" style="margin-top:8px;">' + (pageLoads.length - 50) + ' older entries not shown</div>';
+          if (logEntries.length > 50) {
+            html += '<div class="log-empty" style="margin-top:8px;">' + (logEntries.length - 50) + ' older entries not shown</div>';
           }
         }
       }

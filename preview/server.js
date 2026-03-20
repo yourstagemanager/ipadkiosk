@@ -106,11 +106,36 @@ function getLog() {
   }
 }
 
-function addLog(event) {
+function addLog(event, detail) {
   var log = getLog();
-  log.unshift({ timestamp: new Date().toISOString(), event: event });
+  var entry = { timestamp: new Date().toISOString(), event: event };
+  if (detail) entry.detail = detail;
+  log.unshift(entry);
   if (log.length > 500) log = log.slice(0, 500);
   fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
+}
+
+function stripHtml(str) {
+  return (str || '').replace(/<[^>]*>/g, '').trim();
+}
+
+function diffSave(oldData, newData) {
+  var trackFields = ['message','headerText','footerText','bgColor','fontFamily','imageUrl','watermarkOpacity','refreshInterval'];
+  var labels = { message:'message', headerText:'header', footerText:'footer', bgColor:'bg color', fontFamily:'font', imageUrl:'image', watermarkOpacity:'watermark opacity', refreshInterval:'refresh interval' };
+  var changes = [];
+  for (var i = 0; i < trackFields.length; i++) {
+    var f = trackFields[i];
+    var ov = stripHtml(String(oldData[f] || ''));
+    var nv = stripHtml(String(newData[f] || ''));
+    if (ov !== nv) {
+      if (f === 'message' || f === 'headerText' || f === 'footerText') {
+        changes.push(labels[f] + ': "' + nv.slice(0, 40) + (nv.length > 40 ? '…' : '') + '"');
+      } else {
+        changes.push(labels[f] + ': ' + (nv || '(removed)'));
+      }
+    }
+  }
+  return changes.length ? changes.join(' | ') : 'no changes';
 }
 
 // Render kiosk.html with data substituted
@@ -331,7 +356,10 @@ var server = http.createServer(function(req, res) {
     req.on('end', function() {
       try {
         var fields = JSON.parse(body);
+        var oldData = getData();
+        var diff = diffSave(oldData, fields);
         saveData(fields);
+        addLog('editor-save', diff);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
       } catch (e) {
