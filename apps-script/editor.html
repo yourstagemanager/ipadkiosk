@@ -488,10 +488,11 @@ select { padding-right: 32px; }
 
 <!-- Activity Log Panel -->
 <div class="panel" id="panel-log">
+  <div id="logStatus"></div>
   <div id="logList">
     <div class="log-empty">Loading activity log...</div>
   </div>
-  <button class="btn btn-secondary" onclick="loadLog()" style="margin-top:var(--gap);">Refresh Log</button>
+  <button class="btn btn-secondary" onclick="loadLog()" style="margin-top:var(--gap);">Refresh</button>
 </div>
 
 <!-- Toast -->
@@ -773,20 +774,58 @@ function loadLog() {
 
   google.script.run
     .withSuccessHandler(function(entries) {
+      var statusHtml = '';
       var html = '';
+
       if (!entries || entries.length === 0) {
         html = '<div class="log-empty">No activity yet. The kiosk will log each time it loads or sends a heartbeat.</div>';
       } else {
+        // Status card
+        var lastEntry = entries[0];
+        var lastDt = new Date(lastEntry.timestamp);
+        var ageMs = Date.now() - lastDt.getTime();
+        var isOnline = lastEntry.event === 'heartbeat' && ageMs < 120000;
+        statusHtml =
+          '<div style="background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">' +
+          '<span style="font-size:22px;">' + (isOnline ? '🟢' : '🔴') + '</span>' +
+          '<div><div style="font-weight:600;">' + (isOnline ? 'Online' : 'Offline') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-dim);">Last seen ' + formatTime(lastDt) + '</div></div>' +
+          '</div>';
+
+        // Group consecutive heartbeats
+        var grouped = [];
         for (var i = 0; i < entries.length; i++) {
-          var dt = new Date(entries[i].timestamp);
-          var ev = entries[i].event;
-          var label = ev === 'heartbeat' ? '🟢 heartbeat' : ev === 'preview-load' ? '📱 page load' : escapeHtml(ev);
-          html += '<div class="log-entry">' +
-            '<span class="event">' + label + '</span>' +
-            '<span class="time">' + formatTime(dt) + '</span>' +
-            '</div>';
+          var e = entries[i];
+          var last = grouped[grouped.length - 1];
+          if (e.event === 'heartbeat' && last && last.event === 'heartbeat') {
+            last.count++;
+          } else {
+            grouped.push({ event: e.event, timestamp: e.timestamp, count: 1 });
+          }
+        }
+
+        // Show top 30 grouped entries
+        var show = grouped.slice(0, 30);
+        for (var j = 0; j < show.length; j++) {
+          var g = show[j];
+          var dt = new Date(g.timestamp);
+          var label;
+          if (g.event === 'heartbeat') {
+            label = '🟢 heartbeat' + (g.count > 1 ? ' <span style="color:var(--text-dim);font-weight:400;">×' + g.count + '</span>' : '');
+          } else if (g.event === 'preview-load') {
+            label = '📱 page load';
+          } else {
+            label = escapeHtml(g.event);
+          }
+          html += '<div class="log-entry"><span class="event">' + label + '</span><span class="time">' + formatTime(dt) + '</span></div>';
+        }
+
+        if (grouped.length > 30) {
+          html += '<div class="log-empty" style="margin-top:8px;">' + (grouped.length - 30) + ' older entries not shown</div>';
         }
       }
+
+      document.getElementById('logStatus').innerHTML = statusHtml;
       document.getElementById('logList').innerHTML = html;
     })
     .withFailureHandler(function(err) {
