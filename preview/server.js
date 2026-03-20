@@ -186,6 +186,7 @@ function renderKiosk(data, isPreview) {
     '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n' +
     '<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-status-bar-style" content="black">\n' +
+    '<meta name="format-detection" content="telephone=no, email=no, address=no">\n' +
     (isPreview ? '' : '<meta http-equiv="refresh" content="' + (d.refreshInterval || '300') + '">\n') +
     '<style>\n' +
     '* { margin: 0; padding: 0; box-sizing: border-box; }\n' +
