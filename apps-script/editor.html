@@ -383,6 +383,7 @@ select { padding-right: 32px; }
       <button class="rte-btn size-btn" onclick="rteSetSize('14px','headerText')" title="Small">S</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('20px','headerText')" title="Medium">M</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('28px','headerText')" title="Large">L</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('36px','headerText')" title="Extra Large">XL</button>
       <div class="rte-sep"></div>
       <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'headerText')" title="Text color">
       <div class="rte-sep"></div>
@@ -400,6 +401,7 @@ select { padding-right: 32px; }
       <button class="rte-btn size-btn" onclick="rteSetSize('14px','footerText')" title="Small">S</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('20px','footerText')" title="Medium">M</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('28px','footerText')" title="Large">L</button>
+      <button class="rte-btn size-btn" onclick="rteSetSize('36px','footerText')" title="Extra Large">XL</button>
       <div class="rte-sep"></div>
       <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'footerText')" title="Text color">
       <div class="rte-sep"></div>
@@ -463,6 +465,10 @@ select { padding-right: 32px; }
   <div class="field">
     <label>Image Max Width (%)</label>
     <input type="number" id="imageMaxWidth" min="10" max="100" value="60">
+  </div>
+  <div class="field">
+    <label>Watermark Opacity: <span id="watermarkOpacityVal">30</span>%</label>
+    <input type="range" id="watermarkOpacity" min="0" max="100" value="30" style="width:100%;margin-top:6px;" oninput="document.getElementById('watermarkOpacityVal').textContent=this.value">
   </div>
   <button class="btn btn-primary" onclick="save()">Save &amp; Publish</button>
   <button class="btn btn-secondary" onclick="clearImage()">Remove Image</button>
@@ -612,6 +618,9 @@ function populateFields(d) {
   document.getElementById('imageUrl').value = d.imageUrl || '';
   document.getElementById('imagePosition').value = d.imagePosition || 'above';
   document.getElementById('imageMaxWidth').value = d.imageMaxWidth || '60';
+  var opacityPct = Math.round((parseFloat(d.watermarkOpacity) || 0.30) * 100);
+  document.getElementById('watermarkOpacity').value = opacityPct;
+  document.getElementById('watermarkOpacityVal').textContent = opacityPct;
 
   try {
     document.getElementById('bgColorPicker').value = d.bgColor || '#000000';
@@ -640,7 +649,8 @@ function save() {
     refreshInterval: document.getElementById('refreshInterval').value,
     imageUrl: document.getElementById('imageUrl').value,
     imagePosition: document.getElementById('imagePosition').value,
-    imageMaxWidth: document.getElementById('imageMaxWidth').value
+    imageMaxWidth: document.getElementById('imageMaxWidth').value,
+    watermarkOpacity: (parseFloat(document.getElementById('watermarkOpacity').value) / 100).toFixed(2)
   };
 
   setStatus('saving');
@@ -710,7 +720,8 @@ function forceRefresh() {
     refreshInterval: '5',
     imageUrl: document.getElementById('imageUrl').value,
     imagePosition: document.getElementById('imagePosition').value,
-    imageMaxWidth: document.getElementById('imageMaxWidth').value
+    imageMaxWidth: document.getElementById('imageMaxWidth').value,
+    watermarkOpacity: (parseFloat(document.getElementById('watermarkOpacity').value) / 100).toFixed(2)
   };
 
   setStatus('saving');

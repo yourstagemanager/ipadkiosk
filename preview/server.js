@@ -74,6 +74,7 @@ const DEFAULTS = {
   imagePosition: 'above',
   imageMaxWidth: '60',
   watermarkUrl: '',
+  watermarkOpacity: '0.30',
   refreshInterval: '300',
   lastUpdated: new Date().toISOString()
 };
@@ -170,7 +171,7 @@ function renderKiosk(data) {
     '.watermark-pos-1 { top: 18%; }\n' +
     '.watermark-pos-1 .watermark { max-width: 60%; }\n' +
     '.watermark-pos-2 { top: 58%; }\n' +
-    '.watermark { max-width: 70%; max-height: 35%; opacity: 0.30; filter: grayscale(100%); -webkit-filter: grayscale(100%); pointer-events: none; }\n' +
+    '.watermark { max-width: 70%; max-height: 35%; opacity: ' + (d.watermarkOpacity || '0.30') + '; filter: grayscale(100%); -webkit-filter: grayscale(100%); pointer-events: none; }\n' +
     '.header-bar { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 22px; font-weight: 300; letter-spacing: 1px; line-height: 1.4; padding: 20px 40px; z-index: 2; }\n' +
     '.footer-bar { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 18px; font-weight: 300; letter-spacing: 1px; line-height: 1.4; padding: 20px 40px; z-index: 2; }\n' +
     '.outer { display: table; width: 100%; height: 100%; position: relative; z-index: 1; }\n' +
