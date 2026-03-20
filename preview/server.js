@@ -108,7 +108,7 @@ function getLog() {
 function addLog(event) {
   var log = getLog();
   log.unshift({ timestamp: new Date().toISOString(), event: event });
-  if (log.length > 100) log = log.slice(0, 100);
+  if (log.length > 500) log = log.slice(0, 500);
   fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
 }
 
@@ -186,6 +186,11 @@ function renderKiosk(data) {
     contentHtml + '\n' +
     '</div></div>\n' +
     (d.footerText ? '<div class="footer-bar">' + d.footerText + '</div>\n' : '') +
+    '<script>\n' +
+    'function ping(){var x=new XMLHttpRequest();x.open("GET","/api/ping",true);x.send();}\n' +
+    'ping();\n' +
+    'setInterval(ping,60000);\n' +
+    '</script>\n' +
     '</body>\n</html>';
 }
 
@@ -339,6 +344,13 @@ var server = http.createServer(function(req, res) {
   if (url === '/api/log' && method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(getLog()));
+    return;
+  }
+
+  if (url === '/api/ping' && method === 'GET') {
+    addLog('heartbeat');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
 

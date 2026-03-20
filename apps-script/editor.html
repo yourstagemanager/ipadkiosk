@@ -748,12 +748,14 @@ function loadLog() {
     .withSuccessHandler(function(entries) {
       var html = '';
       if (!entries || entries.length === 0) {
-        html = '<div class="log-empty">No activity yet. The kiosk will log each time it refreshes.</div>';
+        html = '<div class="log-empty">No activity yet. The kiosk will log each time it loads or sends a heartbeat.</div>';
       } else {
         for (var i = 0; i < entries.length; i++) {
           var dt = new Date(entries[i].timestamp);
+          var ev = entries[i].event;
+          var label = ev === 'heartbeat' ? '🟢 heartbeat' : ev === 'preview-load' ? '📱 page load' : escapeHtml(ev);
           html += '<div class="log-entry">' +
-            '<span class="event">' + escapeHtml(entries[i].event) + '</span>' +
+            '<span class="event">' + label + '</span>' +
             '<span class="time">' + formatTime(dt) + '</span>' +
             '</div>';
         }
