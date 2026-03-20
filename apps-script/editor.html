@@ -167,8 +167,10 @@ select { padding-right: 32px; }
 }
 .rte-editor:focus { border-color: var(--accent); }
 .rte-editor-sm { min-height: 60px; }
-.save-msg-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.save-msg-row input { flex: 1; }
+.save-msg-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.save-msg-row input { flex: 1; min-width: 0; }
+.save-msg-row .btn { width: auto; padding: 10px 18px; font-size: 14px; white-space: nowrap; }
+.btn-edit { background: transparent; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
 .saved-msg-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; gap: 8px; }
 .saved-msg-item .msg-info { flex: 1; min-width: 0; }
 .saved-msg-item .msg-label { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -386,7 +388,8 @@ select { padding-right: 32px; }
     <label>Saved Messages</label>
     <div class="save-msg-row">
       <input type="text" id="saveMsgLabel" class="input" placeholder="Name this message..." maxlength="60">
-      <button class="btn btn-secondary" onclick="saveCurrentMessage()" style="white-space:nowrap;padding:0 16px;">Save</button>
+      <button class="btn btn-secondary" id="saveMsgBtn" onclick="saveCurrentMessage()">Save</button>
+      <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEditMessage()" style="display:none;">Cancel</button>
     </div>
     <div id="savedMessagesList"><div style="color:var(--text-dim);font-size:13px;padding:4px 0;">No saved messages yet</div></div>
   </div>
@@ -867,19 +870,52 @@ function forceRefresh() {
 
 // --- Saved Messages ---
 var _savedMessages = [];
+var _editingId = null;
 
 function saveCurrentMessage() {
   var label = document.getElementById('saveMsgLabel').value.trim();
   if (!label) { showToast('Enter a name for this message', 'error'); return; }
   var content = document.getElementById('message').innerHTML;
-  google.script.run
-    .withSuccessHandler(function(result) {
-      document.getElementById('saveMsgLabel').value = '';
-      showToast('Message saved!', 'success');
-      renderSavedMessages(result.messages);
-    })
-    .withFailureHandler(function(err) { showToast('Save failed: ' + err.message, 'error'); })
-    .clientSaveMessage({ label: label, content: content });
+  if (_editingId) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        cancelEditMessage();
+        showToast('Message updated!', 'success');
+        renderSavedMessages(result.messages);
+      })
+      .withFailureHandler(function(err) { showToast('Update failed: ' + err.message, 'error'); })
+      .clientUpdateMessage({ id: _editingId, label: label, content: content });
+  } else {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('saveMsgLabel').value = '';
+        showToast('Message saved!', 'success');
+        renderSavedMessages(result.messages);
+      })
+      .withFailureHandler(function(err) { showToast('Save failed: ' + err.message, 'error'); })
+      .clientSaveMessage({ label: label, content: content });
+  }
+}
+
+function editSavedMessage(id) {
+  var msg = null;
+  for (var i = 0; i < _savedMessages.length; i++) { if (_savedMessages[i].id === id) { msg = _savedMessages[i]; break; } }
+  if (!msg) return;
+  _editingId = id;
+  document.getElementById('saveMsgLabel').value = msg.label;
+  document.getElementById('message').innerHTML = msg.content;
+  document.getElementById('saveMsgBtn').textContent = 'Update';
+  document.getElementById('cancelEditBtn').style.display = '';
+  updateLivePreview();
+  document.getElementById('saveMsgLabel').focus();
+  showToast('Editing: ' + msg.label, 'success');
+}
+
+function cancelEditMessage() {
+  _editingId = null;
+  document.getElementById('saveMsgLabel').value = '';
+  document.getElementById('saveMsgBtn').textContent = 'Save';
+  document.getElementById('cancelEditBtn').style.display = 'none';
 }
 
 function loadSavedMessages() {
@@ -902,6 +938,7 @@ function renderSavedMessages(messages) {
       '<div class="msg-date">' + formatTime(new Date(m.savedAt)) + '</div></div>' +
       '<div class="msg-actions">' +
       '<button class="btn-load" onclick="loadSavedMessage(\'' + m.id + '\')">Load</button>' +
+      '<button class="btn-edit" onclick="editSavedMessage(\'' + m.id + '\')">Edit</button>' +
       '<button class="btn-del" onclick="deleteSavedMessage(\'' + m.id + '\')">✕</button>' +
       '</div></div>';
   }).join('');

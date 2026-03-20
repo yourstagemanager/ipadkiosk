@@ -259,6 +259,9 @@ function getEditorHtml() {
     if (method === 'clientDeleteMessage') {
       return fetch('/api/messages/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: args[0] }) }).then(function(r) { return r.json(); });
     }
+    if (method === 'clientUpdateMessage') {
+      return fetch('/api/messages/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args[0]) }).then(function(r) { return r.json(); });
+    }
     if (method === 'clientGetLog') {
       return fetch('/api/log').then(function(r) { return r.json(); });
     }
@@ -411,6 +414,25 @@ var server = http.createServer(function(req, res) {
         var d = getData();
         if (!d.savedMessages) d.savedMessages = [];
         d.savedMessages.push({ id: Date.now().toString(), label: msg.label, content: msg.content, savedAt: new Date().toISOString() });
+        fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, messages: d.savedMessages }));
+      } catch(e) { res.writeHead(400); res.end(e.message); }
+    });
+    return;
+  }
+
+  if (url === '/api/messages/update' && method === 'POST') {
+    if (!isAuthenticated(req)) { res.writeHead(401); res.end('Unauthorized'); return; }
+    var body = '';
+    req.on('data', function(chunk) { body += chunk; });
+    req.on('end', function() {
+      try {
+        var msg = JSON.parse(body);
+        var d = getData();
+        d.savedMessages = (d.savedMessages || []).map(function(m) {
+          return m.id === msg.id ? { id: m.id, label: msg.label, content: msg.content, savedAt: m.savedAt, updatedAt: new Date().toISOString() } : m;
+        });
         fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, messages: d.savedMessages }));
