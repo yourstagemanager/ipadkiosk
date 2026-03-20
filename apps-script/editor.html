@@ -780,14 +780,16 @@ function loadLog() {
       if (!entries || entries.length === 0) {
         html = '<div class="log-empty">No activity yet. The kiosk will log each time it loads or sends a heartbeat.</div>';
       } else {
-        // Status card — find most recent heartbeat
-        var lastHeartbeat = null;
+        // Status card — find most recent heartbeat or page load
+        var lastSeen = null;
         for (var h = 0; h < entries.length; h++) {
-          if (entries[h].event === 'heartbeat') { lastHeartbeat = entries[h]; break; }
+          if (entries[h].event === 'heartbeat' || entries[h].event === 'preview-load') {
+            lastSeen = entries[h]; break;
+          }
         }
-        var lastDt = new Date(lastHeartbeat ? lastHeartbeat.timestamp : entries[0].timestamp);
+        var lastDt = new Date(lastSeen ? lastSeen.timestamp : entries[0].timestamp);
         var ageMs = Date.now() - lastDt.getTime();
-        var isOnline = lastHeartbeat && ageMs < 120000;
+        var isOnline = lastSeen && ageMs < 120000;
         statusHtml =
           '<div style="background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">' +
           '<span style="font-size:22px;">' + (isOnline ? '🟢' : '🔴') + '</span>' +
@@ -795,27 +797,26 @@ function loadLog() {
           '<div style="font-size:12px;color:var(--text-dim);">Last seen ' + formatTime(lastDt) + '</div></div>' +
           '</div>';
 
-        // Only show page loads and editor saves — heartbeats used for status only
+        // Only show editor saves and errors — heartbeats/page loads used for status only
         var logEntries = [];
         for (var i = 0; i < entries.length; i++) {
-          if (entries[i].event !== 'heartbeat') logEntries.push(entries[i]);
+          var ev = entries[i].event;
+          if (ev !== 'heartbeat' && ev !== 'preview-load') logEntries.push(entries[i]);
         }
 
         var show = logEntries.slice(0, 50);
         if (show.length === 0) {
-          html = '<div class="log-empty">No activity recorded yet.</div>';
+          html = '<div class="log-empty">No saves yet. Editor saves will appear here.</div>';
         } else {
           for (var j = 0; j < show.length; j++) {
             var g = show[j];
             var dt = new Date(g.timestamp);
             var label, detail = '';
-            if (g.event === 'preview-load') {
-              label = '📱 page load';
-            } else if (g.event === 'editor-save') {
+            if (g.event === 'editor-save') {
               label = '💾 editor save';
               if (g.detail) detail = '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">' + escapeHtml(g.detail) + '</div>';
             } else {
-              label = escapeHtml(g.event);
+              label = '⚠️ ' + escapeHtml(g.event);
             }
             html += '<div class="log-entry" style="flex-direction:column;align-items:flex-start;">' +
               '<div style="display:flex;justify-content:space-between;width:100%;"><span class="event">' + label + '</span><span class="time">' + formatTime(dt) + '</span></div>' +
