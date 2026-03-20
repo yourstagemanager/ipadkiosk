@@ -698,23 +698,22 @@ function refreshPreview() {
   if (oldFrame) oldFrame.remove();
   if (oldMsg) oldMsg.remove();
 
-  // Build the kiosk URL — for Apps Script it's same origin with ?page=kiosk
-  // For local preview it's /kiosk
+  // Build the kiosk URL — always use preview=1 to suppress refresh/ping
   var kioskUrl;
   if (window.location.pathname.indexOf('/editor') !== -1) {
     // Local preview server
-    kioskUrl = '/kiosk';
+    kioskUrl = '/kiosk?preview=1';
   } else {
     // Google Apps Script — reload same URL without page param
     var base = window.location.href.split('?')[0];
-    kioskUrl = base + '?page=kiosk&t=' + Date.now();
+    kioskUrl = base + '?page=kiosk&preview=1';
   }
 
   var iframe = document.createElement('iframe');
   iframe.className = 'preview-frame';
   iframe.style.transform = 'scale(' + scale + ')';
   iframe.style.webkitTransform = 'scale(' + scale + ')';
-  iframe.src = kioskUrl + (kioskUrl.indexOf('?') !== -1 ? '&' : '?') + 'nocache=' + Date.now();
+  iframe.src = kioskUrl + '&nocache=' + Date.now();
   card.appendChild(iframe);
 
   var scaleLabel = document.getElementById('previewScale');

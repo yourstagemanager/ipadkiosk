@@ -139,7 +139,7 @@ function diffSave(oldData, newData) {
 }
 
 // Render kiosk.html with data substituted
-function renderKiosk(data) {
+function renderKiosk(data, isPreview) {
   var d = data;
   var isHorizontal = d.imageUrl && (d.imagePosition === 'left' || d.imagePosition === 'right');
 
@@ -186,7 +186,7 @@ function renderKiosk(data) {
     '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n' +
     '<meta name="apple-mobile-web-app-capable" content="yes">\n' +
     '<meta name="apple-mobile-web-app-status-bar-style" content="black">\n' +
-    '<meta http-equiv="refresh" content="' + (d.refreshInterval || '300') + '">\n' +
+    (isPreview ? '' : '<meta http-equiv="refresh" content="' + (d.refreshInterval || '300') + '">\n') +
     '<style>\n' +
     '* { margin: 0; padding: 0; box-sizing: border-box; }\n' +
     'html, body { width: 100%; height: 100%; overflow: hidden; }\n' +
@@ -212,11 +212,12 @@ function renderKiosk(data) {
     contentHtml + '\n' +
     '</div></div>\n' +
     (d.footerText ? '<div class="footer-bar">' + d.footerText + '</div>\n' : '') +
+    (isPreview ? '' :
     '<script>\n' +
     'function ping(){var x=new XMLHttpRequest();x.open("GET","/api/ping",true);x.send();}\n' +
     'ping();\n' +
     'setInterval(ping,60000);\n' +
-    '</script>\n' +
+    '</script>\n') +
     '</body>\n</html>';
 }
 
@@ -406,10 +407,11 @@ var server = http.createServer(function(req, res) {
 
   // Pages
   if (url === '/' || url === '/kiosk') {
-    addLog('preview-load');
+    var isPreview = req.url.indexOf('preview=1') !== -1;
+    if (!isPreview) addLog('preview-load');
     var data = getData();
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(renderKiosk(data));
+    res.end(renderKiosk(data, isPreview));
     return;
   }
 
