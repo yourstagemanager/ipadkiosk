@@ -167,6 +167,15 @@ select { padding-right: 32px; }
 }
 .rte-editor:focus { border-color: var(--accent); }
 .rte-editor-sm { min-height: 60px; }
+.save-msg-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.save-msg-row input { flex: 1; }
+.saved-msg-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; gap: 8px; }
+.saved-msg-item .msg-info { flex: 1; min-width: 0; }
+.saved-msg-item .msg-label { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.saved-msg-item .msg-date { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.saved-msg-item .msg-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-load { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-del { background: transparent; color: var(--text-dim); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
 
 .color-row {
   display: flex;
@@ -372,6 +381,14 @@ select { padding-right: 32px; }
       <button class="rte-btn" onclick="rteCmd('removeFormat')" title="Clear formatting" style="font-size:12px;">CLR</button>
     </div>
     <div class="rte-editor" id="message" contenteditable="true" data-placeholder="Enter your kiosk message..."></div>
+  </div>
+  <div class="field">
+    <label>Saved Messages</label>
+    <div class="save-msg-row">
+      <input type="text" id="saveMsgLabel" class="input" placeholder="Name this message..." maxlength="60">
+      <button class="btn btn-secondary" onclick="saveCurrentMessage()" style="white-space:nowrap;padding:0 16px;">Save</button>
+    </div>
+    <div id="savedMessagesList"><div style="color:var(--text-dim);font-size:13px;padding:4px 0;">No saved messages yet</div></div>
   </div>
   <div class="field">
     <label>Header</label>
@@ -628,6 +645,7 @@ function load() {
       populateFields(data);
       setStatus('connected');
       showLoader(false);
+      loadSavedMessages();
     })
     .withFailureHandler(function(err) {
       setStatus('error');
@@ -845,6 +863,69 @@ function forceRefresh() {
       showToast('Failed: ' + err.message, 'error');
     })
     .clientSaveData(tempFields);
+}
+
+// --- Saved Messages ---
+var _savedMessages = [];
+
+function saveCurrentMessage() {
+  var label = document.getElementById('saveMsgLabel').value.trim();
+  if (!label) { showToast('Enter a name for this message', 'error'); return; }
+  var content = document.getElementById('message').innerHTML;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('saveMsgLabel').value = '';
+      showToast('Message saved!', 'success');
+      renderSavedMessages(result.messages);
+    })
+    .withFailureHandler(function(err) { showToast('Save failed: ' + err.message, 'error'); })
+    .clientSaveMessage({ label: label, content: content });
+}
+
+function loadSavedMessages() {
+  google.script.run
+    .withSuccessHandler(function(messages) { renderSavedMessages(messages); })
+    .clientGetMessages();
+}
+
+function renderSavedMessages(messages) {
+  _savedMessages = messages || [];
+  var list = document.getElementById('savedMessagesList');
+  if (!_savedMessages.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:4px 0;">No saved messages yet</div>';
+    return;
+  }
+  list.innerHTML = _savedMessages.slice().reverse().map(function(m) {
+    var safeLabel = m.label.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<div class="saved-msg-item">' +
+      '<div class="msg-info"><div class="msg-label">' + safeLabel + '</div>' +
+      '<div class="msg-date">' + formatTime(new Date(m.savedAt)) + '</div></div>' +
+      '<div class="msg-actions">' +
+      '<button class="btn-load" onclick="loadSavedMessage(\'' + m.id + '\')">Load</button>' +
+      '<button class="btn-del" onclick="deleteSavedMessage(\'' + m.id + '\')">✕</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+function loadSavedMessage(id) {
+  var msg = null;
+  for (var i = 0; i < _savedMessages.length; i++) { if (_savedMessages[i].id === id) { msg = _savedMessages[i]; break; } }
+  if (!msg) return;
+  if (confirm('Load "' + msg.label + '"? Your current message will be replaced.')) {
+    document.getElementById('message').innerHTML = msg.content;
+    updateLivePreview();
+    showToast('Loaded: ' + msg.label, 'success');
+  }
+}
+
+function deleteSavedMessage(id) {
+  var msg = null;
+  for (var i = 0; i < _savedMessages.length; i++) { if (_savedMessages[i].id === id) { msg = _savedMessages[i]; break; } }
+  if (!msg || !confirm('Delete "' + msg.label + '"?')) return;
+  google.script.run
+    .withSuccessHandler(function(result) { showToast('Deleted', 'success'); renderSavedMessages(result.messages); })
+    .withFailureHandler(function(err) { showToast('Delete failed: ' + err.message, 'error'); })
+    .clientDeleteMessage(id);
 }
 
 // --- Activity Log ---
