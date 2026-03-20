@@ -367,7 +367,7 @@ select { padding-right: 32px; }
       <button class="rte-btn size-btn" onclick="rteSetSize('72px')" title="Large">L</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('96px')" title="Extra Large">XL</button>
       <div class="rte-sep"></div>
-      <input type="color" class="rte-color-input" id="rteColor" value="#FFFFFF" onchange="rteApplyColor(this.value)" title="Text color">
+      <input type="color" class="rte-color-input" id="rteColor" value="#FFFFFF" onmousedown="saveColorRange('message')" onchange="rteApplyColor(this.value)" title="Text color">
       <div class="rte-sep"></div>
       <button class="rte-btn" onclick="rteCmd('removeFormat')" title="Clear formatting" style="font-size:12px;">CLR</button>
     </div>
@@ -385,7 +385,7 @@ select { padding-right: 32px; }
       <button class="rte-btn size-btn" onclick="rteSetSize('28px','headerText')" title="Large">L</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('36px','headerText')" title="Extra Large">XL</button>
       <div class="rte-sep"></div>
-      <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'headerText')" title="Text color">
+      <input type="color" class="rte-color-input" value="#FFFFFF" onmousedown="saveColorRange('headerText')" onchange="rteApplyColor(this.value,'headerText')" title="Text color">
       <div class="rte-sep"></div>
       <button class="rte-btn" onclick="rteCmd('removeFormat','headerText')" title="Clear formatting" style="font-size:12px;">CLR</button>
     </div>
@@ -403,7 +403,7 @@ select { padding-right: 32px; }
       <button class="rte-btn size-btn" onclick="rteSetSize('28px','footerText')" title="Large">L</button>
       <button class="rte-btn size-btn" onclick="rteSetSize('36px','footerText')" title="Extra Large">XL</button>
       <div class="rte-sep"></div>
-      <input type="color" class="rte-color-input" value="#FFFFFF" onchange="rteApplyColor(this.value,'footerText')" title="Text color">
+      <input type="color" class="rte-color-input" value="#FFFFFF" onmousedown="saveColorRange('footerText')" onchange="rteApplyColor(this.value,'footerText')" title="Text color">
       <div class="rte-sep"></div>
       <button class="rte-btn" onclick="rteCmd('removeFormat','footerText')" title="Clear formatting" style="font-size:12px;">CLR</button>
     </div>
@@ -538,9 +538,25 @@ function rteSetSize(size, targetId) {
   editor.focus();
 }
 
+var _savedColorRange = {};
+
+function saveColorRange(targetId) {
+  var id = targetId || 'message';
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    _savedColorRange[id] = sel.getRangeAt(0).cloneRange();
+  }
+}
+
 function rteApplyColor(color, targetId) {
+  var id = targetId || 'message';
+  if (_savedColorRange[id]) {
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(_savedColorRange[id]);
+    delete _savedColorRange[id];
+  }
   document.execCommand('foreColor', false, color);
-  document.getElementById(targetId || 'message').focus();
 }
 
 // --- Color picker sync ---
